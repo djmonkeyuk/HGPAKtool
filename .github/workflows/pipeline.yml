@@ -1,7 +1,7 @@
 name: HGPAKtool
 
 on:
-  # Run on all branches except for the gh-pages branch
+  # Run on all branches except for the gh-pages branch. test
   push:
     paths-ignore:
       - '*.md'
