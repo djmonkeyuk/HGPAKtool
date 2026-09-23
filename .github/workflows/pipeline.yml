@@ -1,7 +1,7 @@
 name: HGPAKtool
 
 on:
-  # Run on all branches except for the gh-pages branch. test
+  # Run on all branches except for the gh-pages branch.
   push:
     paths-ignore:
       - '*.md'
@@ -87,7 +87,7 @@ jobs:
         os: [
           {name: 'Ubuntu-latest'},
           {name: 'Windows-2025'},
-          {name: 'macOS'},
+          {name: 'macos-latest'},
         ]
     needs:
       - lint_testing
