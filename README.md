@@ -1,7 +1,7 @@
 # HGPAK tool
 
 This tool is able to read .pak files for the game No Man's Sky on all platforms.
-Note that this tool only works on .pak files after the NMS 5.50 (Worlds Part II) update.
+Note that this tool only works on .pak files after the NMS 5.50 (Worlds Part II) update. Test
 
 ## Installation
 
