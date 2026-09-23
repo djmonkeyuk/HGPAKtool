@@ -110,7 +110,7 @@ jobs:
         if: matrix.os.name == 'Ubuntu-latest'
         run: uv run pyinstaller hgpaktool/cli.py --onefile --name hgpaktool
       - name: Build HGPAKtool macOS binary
-        if: matrix.os.name == 'macOS'
+        if: matrix.os.name == 'macos-latest'
         run: uv run pyinstaller hgpaktool/cli.py --onefile --name hgpaktool
       - name: Upload binary
         uses: actions/upload-artifact@v4
