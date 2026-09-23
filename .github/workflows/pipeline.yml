@@ -1,7 +1,7 @@
 name: HGPAKtool
 
 on:
-  # Run on all branches except for the gh-pages branch.
+  # Run on all branches except for the gh-pages branch
   push:
     paths-ignore:
       - '*.md'
@@ -161,7 +161,7 @@ jobs:
           mv bin/binary-Ubuntu-latest/hgpaktool bin/hgpaktool
           chmod u=rwx,g=rx,o=rx bin/hgpaktool
           mv bin/binary-Windows-2025/hgpaktool.exe bin/hgpaktool.exe
-          mv bin/binary-macOS/hgpaktool.exe dist/hgpaktool
+          mv bin/binary-macOS/hgpaktool.exe macbin/hgpaktool
       - name: Compress binaries win/linux
         run: |
           cd bin
@@ -171,7 +171,7 @@ jobs:
           mv hgpaktool-x86_64-pc-windows.zip ../hgpaktool-x86_64-pc-windows.zip
       - name: Compress macOS binary
         run: |
-          cd dist
+          cd macbin
           zip hgpaktool-macOS.zip hgpaktool
           mv hgpaktool-macOS.zip ../hgpaktool-macOS.zip
       - name: Publish binaries to github release
