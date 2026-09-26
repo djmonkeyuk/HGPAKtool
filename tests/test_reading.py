@@ -1,5 +1,6 @@
 import os.path as op
 import shutil
+import struct
 from io import BytesIO
 from pathlib import Path
 from typing import Literal
@@ -8,7 +9,7 @@ import pytest
 from utils import get_files, plat_map
 
 from hgpaktool import HGPAKFile
-from hgpaktool.api import InvalidFileException
+from hgpaktool.api import FILEINFO_FMT, HGPakFileIndex, InvalidFileException
 from hgpaktool.utils import normalise_path, parse_manifest
 
 DATA_DIR = op.join(op.dirname(__file__), "data")
@@ -117,6 +118,64 @@ def test_extract_specific_multi_file(platform: Literal["windows", "mac", "linux"
         for blob in data.values():
             assert isinstance(blob, bytes)
             assert len(blob) > 0
+
+
+@pytest.mark.parametrize("platform", ("windows", "mac", "linux"))
+def test_filtered_extraction_mixed_filter_shapes_combine_correctly(
+    platform: Literal["windows", "mac", "linux"],
+):
+    """_get_filtered_filelist() was rewritten for speed against real data with many filters in one call
+    (see that method's own doc comment) into three separate paths - plain substring containment for the
+    common "*text*" shape, a combined compiled regex for anything with other glob metacharacters, and a
+    direct dict entry for an exact (non-wildcard) filter - this confirms all three combine correctly in
+    one call, matching what running each filter's old separate fnmatch.filter()/exact-lookup would have
+    produced."""
+    with HGPAKFile(op.join(DATA_DIR, f"NMSARC.MeshPlanetSKY.{platform}.pak"), platform) as pak:
+        exact_name = f"models/planets/sky/skysphere.geometry.mbin.{plat_map[platform]}"
+        filters = [
+            "*rainbowplane*",  # plain substring shape
+            "models/planets/sky/skycube*",  # general glob (no leading "*")
+            exact_name,  # exact, non-wildcard
+        ]
+        matched = set(pak._get_filtered_filelist(filters))
+        assert exact_name in matched
+        assert any("rainbowplane" in name for name in matched)
+        assert any(name.startswith("models/planets/sky/skycube") for name in matched)
+        # Exactly the union of what each filter alone would match - nothing extra, nothing missing.
+        expected = (
+            set(pak._get_filtered_filelist("*rainbowplane*"))
+            | set(pak._get_filtered_filelist("models/planets/sky/skycube*"))
+            | {exact_name}
+        )
+        assert matched == expected
+
+
+def test_file_index_read_bulk_matches_per_entry_semantics():
+    """HGPakFileIndex.read() was rewritten to bulk-read+decode the whole file index in one shot instead
+    of one `fobj.read()` + `struct.unpack()` per entry (a perf fix for paks with many thousands of
+    files) - this confirms the bulk decode still produces identical FileInfo entries, and that the `n`
+    partial-read parameter still stops after exactly n entries and leaves the stream positioned right
+    after them (rather than after the full file_count), since callers rely on that to keep reading
+    whatever comes next in the file."""
+    entries = [
+        (b"\x01" * 16, 0x100, 0x10),
+        (b"\x02" * 16, 0x200, 0x20),
+        (b"\x03" * 16, 0x300, 0x30),
+    ]
+    raw = b"".join(struct.pack(FILEINFO_FMT, *entry) for entry in entries)
+
+    # Full read (n=-1, the default): every entry decoded, in order.
+    index = HGPakFileIndex()
+    index.read(len(entries), BytesIO(raw))
+    assert [finf.values() for finf in index.fileInfo] == entries
+
+    # Partial read (n < file_count): stops after exactly n entries, leaving the stream positioned right
+    # after them, not after the full file_count.
+    fobj = BytesIO(raw + b"TRAILING")
+    index = HGPakFileIndex()
+    index.read(len(entries), fobj, n=2)
+    assert [finf.values() for finf in index.fileInfo] == entries[:2]
+    assert fobj.read() == struct.pack(FILEINFO_FMT, *entries[2]) + b"TRAILING"
 
 
 def test_invalid_pak():
